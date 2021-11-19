@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from transformerbertpgn.translate import translate as vi_ba_translate
+from translate import translate as vi_ba_translate
 
 app = Flask(__name__)
 
