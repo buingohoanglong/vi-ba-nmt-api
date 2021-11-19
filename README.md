@@ -3,6 +3,7 @@
 ## Setup
 Install environment: <br/>
 $ conda env create -f environment.yml <br/>
+$ conda activate vi-ba-nmt-api <br/>
 Prepare vncorenlp service: <br/>
 $ cd transformerbertpgn <br/>
 $ ./prepare_vncorenlp.sh <br/>
