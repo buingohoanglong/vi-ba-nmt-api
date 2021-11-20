@@ -9,40 +9,84 @@ annotator = VnCoreNLP(address="http://127.0.0.1", port=9000)
 tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=False)
 phobert = AutoModel.from_pretrained("vinai/phobert-base")
 
-# load dictionary
-dictionary = Dictionary(tokenizer=tokenizer)
-dictionary.add_from_file('./transformerbertpgn/data/vi-ba/dict.txt')
-dictionary.build_dictionary()
-print(f'--|Vocab size: {len(dictionary)}')
-
-# init criterion
-criterion = Loss(ignore_idx=dictionary.token_to_index(dictionary.pad_token), smoothing=0.1)
-
 # get device
 device = 'cpu'
 
-# load model
-model = NMT.load_from_checkpoint(
-    checkpoint_path="./transformerbertpgn/checkpoints/epoch=10-val_loss=0.92.ckpt",
-    dictionary=dictionary, 
+
+def get_model(dictionary_path, checkpoint_path, tokenizer, annotator, bert,
+        d_model=512, d_ff=2048, num_heads=8, num_layers=6, dropout=0.1, d_bert=768, 
+        use_pgn=False, use_ner=False, max_src_len=256, max_tgt_len=256, device='cpu'):
+    # load dictionary
+    dictionary = Dictionary(tokenizer=tokenizer)
+    dictionary.add_from_file(dictionary_path)
+    dictionary.build_dictionary()
+    print(f'--|Vocab size: {len(dictionary)}')
+
+    # init criterion
+    criterion = Loss(ignore_idx=dictionary.token_to_index(dictionary.pad_token), smoothing=0.1)
+
+    # load model
+    model = NMT.load_from_checkpoint(
+        checkpoint_path=checkpoint_path,
+        dictionary=dictionary, 
+        tokenizer=tokenizer, 
+        annotator=annotator, 
+        criterion=criterion,
+        d_model=d_model, 
+        d_ff=d_ff,
+        num_heads=num_heads, 
+        num_layers=num_layers, 
+        dropout=dropout,
+        bert=bert,
+        d_bert=d_bert,
+        use_pgn=use_pgn,
+        use_ner=use_ner,
+        max_src_len=max_src_len,
+        max_tgt_len=max_tgt_len
+    )
+    model.eval()
+    model.to(device)
+
+    return model
+
+# get models
+bert_fused_model = get_model(
+    dictionary_path="./transformerbertpgn/data/vi-ba/dict.txt",
+    checkpoint_path="./transformerbertpgn/checkpoints/bert-fused/epoch=10-val_loss=0.92.ckpt",
     tokenizer=tokenizer, 
     annotator=annotator, 
-    criterion=criterion,
+    bert=phobert,
     d_model=512, 
-    d_ff=2048,
+    d_ff=2048, 
     num_heads=8, 
     num_layers=6, 
-    dropout=0.1,
-    bert=phobert,
-    d_bert=768,
-    use_pgn=False,
-    use_ner=False,
-    max_src_len=256,
-    max_tgt_len=256
+    dropout=0.1, 
+    d_bert=768, 
+    use_pgn=False, 
+    use_ner=False, 
+    max_src_len=256, 
+    max_tgt_len=256, 
+    device=device
 )
-model.eval()
 
-model.to(device)
+tbmp_model = get_model(
+    dictionary_path="./transformerbertpgn/data/vi-ba/dict-new.txt",
+    checkpoint_path="./transformerbertpgn/checkpoints/tbmp/epoch=05-val_loss=1.32.ckpt",
+    tokenizer=tokenizer, 
+    annotator=annotator, 
+    bert=phobert,
+    d_model=512, 
+    d_ff=2048, 
+    num_heads=8, 
+    num_layers=6, 
+    dropout=0.1, 
+    d_bert=768, 
+    use_pgn=True, 
+    use_ner=True, 
+    max_src_len=256, 
+    max_tgt_len=256, 
+    device=device
+)
 
 def process_raw_text(text, dictionary, tokenizer, annotator, 
                 max_src_len=256, use_pgn=False, use_ner=False, device='cpu'):
@@ -104,6 +148,14 @@ def process_raw_text(text, dictionary, tokenizer, annotator,
     }
 
 def translate(vi, selected_model):
+    model = None
+    if selected_model == 'bert-fused':
+        model = bert_fused_model
+    elif selected_model == 'tbmp':
+        model = tbmp_model
+    else:
+        raise Exception('Unsuported model')
+        
     input = process_raw_text(
         vi, model.dictionary, model.tokenizer, model.annotator, 
         max_src_len=model.max_src_len, use_pgn=model.model.use_pgn, 
