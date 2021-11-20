@@ -7,7 +7,7 @@ $ conda activate vi-ba-nmt-api <br/>
 **Prepare vncorenlp service:** <br/>
 $ cd transformerbertpgn <br/>
 $ ./prepare_vncorenlp.sh <br/>
-**Get models' weights** <br/>
+**Get models' weights:** <br/>
 Get models' weights from: https://drive.google.com/drive/folders/1JVtzatiNdcFFaODza8Hhr4aMBo7OFYhe?usp=sharing <br/>
 Extract bert-fused/tbmp's weights: <br/>
 $ cd transformerbertpgn <br/>
